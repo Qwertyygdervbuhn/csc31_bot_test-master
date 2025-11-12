@@ -16,7 +16,9 @@ jobs:
           name: Run Unit Tests
           command: |
             . venv/bin/activate
+            export PYTHONPATH="$PYTHONPATH:$(pwd):$(pwd)/src"
             pytest -v
+
 workflows:
   version: 2
   test_all:
