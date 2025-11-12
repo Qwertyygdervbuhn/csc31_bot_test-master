@@ -7,10 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-TOKEN = os.getenv("TOKEN", "")
-BASE_URL = os.getenv("URL", "https://api.telegram.org/bot").rstrip("/")
-ADMIN_ID = os.getenv("ADMIN_ID", "")
-API_URL = f"{BASE_URL}{TOKEN}" if TOKEN else ""
+def _norm_base(url: str) -> str:
+    return url.rstrip("/")
+
+TOKEN = (os.getenv("TOKEN") or "").strip()
+BASE_URL = _norm_base(os.getenv("URL") or "https://api.telegram.org/bot")
+ADMIN_ID = (os.getenv("ADMIN_ID") or "").strip()
+API_URL = f"{BASE_URL}/bot{TOKEN}" if not BASE_URL.endswith("/bot") else f"{BASE_URL}{TOKEN}"
 
 def handle_text(text: str) -> str:
     t = (text or "").strip().lower()
