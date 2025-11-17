@@ -1,10 +1,12 @@
 version: 2.1
+
 jobs:
   test:
     docker:
       - image: cimg/python:3.12
     steps:
       - checkout
+
       - run:
           name: Install Dependencies
           command: |
@@ -12,6 +14,14 @@ jobs:
             . venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
+
+      - run:
+          name: Create .env file
+          command: |
+            echo "TOKEN=${TOKEN}" > .env
+            echo "ADMIN_ID=${ADMIN_ID}" >> .env
+            echo "URL=${URL}" >> .env
+
       - run:
           name: Run Unit Tests
           command: |
