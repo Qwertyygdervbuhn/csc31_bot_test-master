@@ -4,25 +4,34 @@ import random
 import requests
 from typing import Any, Dict, Optional
 from dotenv import load_dotenv
+from weather import get_weather
 
 load_dotenv()
 
-def _norm_base(url: str) -> str:
-    return url.rstrip("/")
-
-TOKEN = (os.getenv("TOKEN") or "").strip()
-BASE_URL = _norm_base(os.getenv("URL") or "https://api.telegram.org/bot")
-ADMIN_ID = (os.getenv("ADMIN_ID") or "").strip()
-API_URL = f"{BASE_URL}/bot{TOKEN}" if not BASE_URL.endswith("/bot") else f"{BASE_URL}{TOKEN}"
+TOKEN = os.getenv("TOKEN", "")
+BASE_URL = os.getenv("URL", "https://api.telegram.org/bot").rstrip("/")
+ADMIN_ID = os.getenv("ADMIN_ID", "")
+API_URL = f"{BASE_URL}{TOKEN}" if TOKEN else ""
 
 def handle_text(text: str) -> str:
-    t = (text or "").strip().lower()
+    raw = (text or "").strip()
+    t = raw.lower()
+
+    if t.startswith("weather ") or t.startswith("/weather "):
+        if t.startswith("/weather "):
+            city = raw.strip()[len("/weather "):]
+        else:
+            city = raw.strip()[len("weather "):]
+        if not city:
+            return "Напиши город после команды, например: weather Kyiv"
+        return get_weather(city)
+
     if t in ("hi", "hello", "hey", "привет"):
         return "Салем! Черкани /help, чтобы увидеть, что я умею"
     if t == "csc31":
         return "Python"
     if t == "python":
-        return "Версия 3.14 🐍"
+        return "Версия 3.13🐍"
     if t == "dice":
         _1 = random.randint(1, 6)
         _2 = random.randint(1, 6)
@@ -34,6 +43,8 @@ def handle_text(text: str) -> str:
             "/mood — узнать моё настроение \n"
             "/rest —  узнать как себя чувсвую \n"
             "/advice — получить совет от бота ️\n"
+            "weather <город> — узнать погоду\n"
+            "/weather <город> — узнать погоду\n"
             "dice — бросить кости 🎲\n"
         )
     if t == "/mood":
