@@ -4,6 +4,7 @@ import random
 import requests
 from typing import Any, Dict, Optional
 from dotenv import load_dotenv
+from weather import get_weather
 
 load_dotenv()
 
@@ -12,14 +13,26 @@ BASE_URL = os.getenv("URL", "https://api.telegram.org/bot").rstrip("/")
 ADMIN_ID = os.getenv("ADMIN_ID", "")
 API_URL = f"{BASE_URL}{TOKEN}" if TOKEN else ""
 
+
 def handle_text(text: str) -> str:
-    t = (text or "").strip().lower()
+    raw = (text or "").strip()
+    t = raw.lower()
+
+    if t.startswith("weather ") or t.startswith("/weather "):
+        if t.startswith("/weather "):
+            city = raw.strip()[len("/weather "):]
+        else:
+            city = raw.strip()[len("weather "):]
+        if not city:
+            return "Напиши город после команды, например: weather Kyiv"
+        return get_weather(city)
+
     if t in ("hi", "hello", "hey", "привет"):
         return "Салем! Черкани /help, чтобы увидеть, что я умею"
     if t == "csc31":
         return "Python"
     if t == "python":
-        return "Версия 3.14 🐍"
+        return "Версия 3.13🐍"
     if t == "dice":
         _1 = random.randint(1, 6)
         _2 = random.randint(1, 6)
@@ -31,6 +44,8 @@ def handle_text(text: str) -> str:
             "/mood — узнать моё настроение \n"
             "/rest —  узнать как себя чувсвую \n"
             "/advice — получить совет от бота ️\n"
+            "weather <город> — узнать погоду\n"
+            "/weather <город> — узнать погоду\n"
             "dice — бросить кости 🎲\n"
         )
     if t == "/mood":
@@ -60,6 +75,7 @@ def handle_text(text: str) -> str:
         return random.choice(advices)
     return "Сорян, не пониманте. черкани /help для списка команд."
 
+
 def _get_updates(offset: Optional[int] = None, timeout: int = 25) -> Dict[str, Any]:
     assert API_URL, "TOKEN/URL не заданы (API_URL пуст)."
     params = {"timeout": timeout}
@@ -69,16 +85,19 @@ def _get_updates(offset: Optional[int] = None, timeout: int = 25) -> Dict[str, A
     r.raise_for_status()
     return r.json()
 
+
 def _send_message(chat_id: int, text: str) -> None:
     assert API_URL, "TOKEN/URL не заданы (API_URL пуст)."
     data = {"chat_id": chat_id, "text": text}
     requests.post(f"{API_URL}/sendMessage", data=data, timeout=10)
+
 
 def _extract_message(update: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     msg = update.get("message") or update.get("edited_message")
     if not isinstance(msg, dict):
         return None
     return msg
+
 
 def main() -> None:
     if os.getenv("CI", "").lower() in ("1", "true", "yes"):
@@ -112,6 +131,33 @@ def main() -> None:
             time.sleep(2)
         except Exception:
             time.sleep(1)
+
+
+url = ""
+
+
+def last_update(token: str):
+    r = requests.get(token + "getUpdates")
+    data = r.json()
+    res = data.get("result", [])
+    if not res:
+        return None
+    return res[-1]
+
+
+def get_chat_id(update):
+    return update["message"]["chat"]["id"]
+
+
+def get_message_text(update):
+    return update["message"]["text"]
+
+
+def send_message(chat_id: int, text: str):
+    payload = {"chat_id": chat_id, "text": text}
+    r = requests.post(url + "sendMessage", data=payload)
+    return r
+
 
 if __name__ == "__main__":
     main()
