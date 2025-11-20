@@ -18,7 +18,31 @@ jobs:
           command: |
             . venv/bin/activate
             export PYTHONPATH="$PYTHONPATH:$(pwd):$(pwd)/src"
-            pytest -v
+            pytest tests/tests_unit/ --maxfail=5 --disable-warnings -v
+      - save_cache:
+          paths:
+            - ~/.cache/pip
+            - venv
+          key: v2-dependencies-{{ checksum "requirements.txt" }}
+
+  run_api_tests:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+      - run:
+          name: Run API tests
+          command: |
+            . venv/bin/activate
+            export PYTHONPATH="$PYTHONPATH:$(pwd):$(pwd)/src"
+            pytest tests/tests_api/ --maxfail=5 --disable-warnings -v
 
   approve_bot_test:
     type: approval
@@ -52,9 +76,13 @@ workflows:
   build_and_test:
     jobs:
       - run_unit_tests
+      - run_api_tests
+
       - approve_bot_test:
           requires:
             - run_unit_tests
+            - run_api_tests
+
       - create_env_and_run_bot:
           requires:
             - approve_bot_test
